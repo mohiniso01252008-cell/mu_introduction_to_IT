@@ -1,23 +1,30 @@
+import telebot
 import os
-from dotenv import load_dotenv
-from telegram import Update
-from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, filters, ContextTypes
-
-load_dotenv()  # loads .env file
+from flask import Flask
+import threading
 
 TOKEN = os.getenv("BOT_TOKEN")
+bot = telebot.TeleBot(TOKEN)
 
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("Hello! Send me something 😊")
+@bot.message_handler(commands=['start'])
+def start(message):
+    bot.reply_to(message, "Bot is working!")
 
-async def echo(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    text = update.message.text
-    reply = f"You said: {text.upper()}"
-    await update.message.reply_text(reply)
+@bot.message_handler(func=lambda m: True)
+def handle(message):
+    bot.reply_to(message, message.text.upper())
 
-app = ApplicationBuilder().token(TOKEN).build()
+# Flask app for Render
+app = Flask(__name__)
 
-app.add_handler(CommandHandler("start", start))
-app.add_handler(MessageHandler(filters.TEXT, echo))
+@app.route('/')
+def home():
+    return "Bot is running"
 
-app.run_polling()
+def run_bot():
+    bot.infinity_polling()
+
+if __name__ == "__main__":
+    threading.Thread(target=run_bot).start()
+    port = int(os.environ.get("PORT", 10000))
+    app.run(host="0.0.0.0", port=port)
